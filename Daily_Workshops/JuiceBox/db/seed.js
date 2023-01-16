@@ -7,8 +7,12 @@ const {
     getUserById,
     createPost,
     updatePost,
+    createTags,
+    createPostTag,
+    addTagsToPost,
     getAllPosts,
-    getPostsByUser
+    getPostsByUser,
+    getPostById
 } = require('./index');
 
 
@@ -20,6 +24,8 @@ async function dropTables() {
         console.log("Starting to drop tables...");
 
         await client.query(`
+            DROP TABLE IF EXISTS post_tags;
+            DROP TABLE IF EXISTS tags;
             DROP TABLE IF EXISTS posts;
             DROP TABLE IF EXISTS users;
         `);
@@ -57,6 +63,21 @@ async function createTables() {
             );
         `)
 
+        await client.query(`
+            CREATE TABLE tags (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) UNIQUE NOT NULL
+            );
+        `)
+
+        await client.query(`
+            CREATE TABLE post_tags (
+                "postId" INTEGER REFERENCES posts(id),
+                "tagId" INTEGER REFERENCES tags(id),
+                UNIQUE ("postId", "tagId")
+            );
+        `)
+
         console.log("Finished building tables!")
     } catch (error) {
         console.log("Error building tables!");
@@ -85,28 +106,61 @@ async function createInitialPosts() {
         const [albert, sandra, k1ll3rB33z] = await getAllUsers();
         console.log('Captured Users');
 
+        console.log('Starting to create posts within createInitialPosts.....')
+
         await createPost({
             authorId: albert.id,
             title: "First Post",
-            content: "This is my first post!"
+            content: "This is my first post!",
+            tags: ["#happy", "#aussieaussieaussie"]
         });
 
 
         await createPost({
             authorId: sandra.id,
             title: "Spongebob",
-            content: "HIIYAAAH!"
+            content: "HIIYAAAH!",
+            tags: ["#texasy'all", "#squirelthings"]
         });
 
         await createPost({
             authorId: k1ll3rB33z.id,
             title: "Protect ya neck",
-            content: "Killa bees on deck"
+            content: "Killa bees on deck",
+            tags: ["#wutangisforthechildren", "#wutangforever", "#welcometoshaolin"]
         });
+
+        console.log('finished creating posts!')
 
 
     } catch (error) {
         console.log('Error Creating Initial Posts!');
+        throw error;
+    }
+}
+
+async function createInitialTags() {
+    try {
+
+        console.log('Starting to create tags....');
+
+        const [happy, sad, inspo, catman] = await createTags([
+            '#happy',
+            '#worst-day-ever',
+            '#youcandoanything',
+            '#catmandoeverything'
+        ]);
+
+        const [postOne, postTwo, postThree] = await getAllPosts();
+
+        await addTagsToPost(postOne.id, [happy, inspo]);
+        await addTagsToPost(postTwo.id, [sad, inspo]);
+        await addTagsToPost(postThree.id, [happy, catman, inspo]);
+
+        console.log('Finished creating tags!')
+
+    } catch (error) {
+        console.log("Error creating tags!");
         throw error;
     }
 }
@@ -119,8 +173,9 @@ async function rebuildDB() {
         await createTables();
         await createInitialUsers();
         await createInitialPosts();
-        //This is where we're failing. 
+        await createInitialTags(); // new
     } catch (error) {
+        console.log("Error during rebuildDB");
         throw error;
     }
 }
@@ -144,12 +199,18 @@ async function testDB() {
         const posts = await getAllPosts();
         console.log("Result:", posts);
 
-        console.log("Calling updatePost on posts[0]");
-        const updatePostResult = await updatePost(posts[0].id, {
-            title: "New Title",
-            content: "Updated Content"
+        // console.log("Calling updatePost on posts[0]");
+        // const updatePostResult = await updatePost(posts[0].id, {
+        //     title: "New Title",
+        //     content: "Updated Content"
+        // });
+        // console.log("Result:", updatePostResult);
+
+        console.log("Calling updatePost on posts[1], only updating tags");
+        const updatePostTagsResult = await updatePost(posts[1].id, {
+            tags: ["#youcandoanything", "#redfish", "#bluefish"]
         });
-        console.log("Result:", updatePostResult);
+        console.log("Result:", updatePostTagsResult);
 
         console.log("Calling getUserById with 1");
         const albert = await getUserById(1);
@@ -161,6 +222,8 @@ async function testDB() {
         throw error;
     }
 }
+
+
 
 rebuildDB()
     .then(testDB)
