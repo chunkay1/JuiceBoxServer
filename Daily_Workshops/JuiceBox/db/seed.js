@@ -1,4 +1,22 @@
 // grab our client with destructuring from the export in index.js
+// const {
+//     client,
+//     createUser,
+//     updateUser,
+//     getAllUsers,
+//     getUserById,
+//     createPost,
+//     updatePost,
+//     getAllPosts,
+//     getAllTags,
+//     getPostsByTagName,
+//     createTags,
+//     createPostTag,
+//     addTagsToPost,
+//     getPostsByUser,
+//     getPostById
+// } = require('./index');
+
 const {
     client,
     createUser,
@@ -7,12 +25,9 @@ const {
     getUserById,
     createPost,
     updatePost,
-    createTags,
-    createPostTag,
-    addTagsToPost,
     getAllPosts,
-    getPostsByUser,
-    getPostById
+    getAllTags,
+    getPostsByTagName
 } = require('./index');
 
 
@@ -51,9 +66,7 @@ async function createTables() {
                 location varchar(255) NOT NULL,
                 active BOOLEAN DEFAULT true
             );
-        `);
 
-        await client.query(`
             CREATE TABLE posts (
                 id SERIAL PRIMARY KEY,
                 "authorId" INTEGER REFERENCES users(id) NOT NULL,
@@ -61,16 +74,12 @@ async function createTables() {
                 content TEXT NOT NULL,
                 active BOOLEAN DEFAULT true
             );
-        `)
 
-        await client.query(`
             CREATE TABLE tags (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) UNIQUE NOT NULL
             );
-        `)
 
-        await client.query(`
             CREATE TABLE post_tags (
                 "postId" INTEGER REFERENCES posts(id),
                 "tagId" INTEGER REFERENCES tags(id),
@@ -120,7 +129,7 @@ async function createInitialPosts() {
             authorId: sandra.id,
             title: "Spongebob",
             content: "HIIYAAAH!",
-            tags: ["#texasy'all", "#squirelthings"]
+            tags: ["#texasy'all", "#squirrelthings"]
         });
 
         await createPost({
@@ -173,7 +182,6 @@ async function rebuildDB() {
         await createTables();
         await createInitialUsers();
         await createInitialPosts();
-        await createInitialTags(); // new
     } catch (error) {
         console.log("Error during rebuildDB");
         throw error;
@@ -199,12 +207,12 @@ async function testDB() {
         const posts = await getAllPosts();
         console.log("Result:", posts);
 
-        // console.log("Calling updatePost on posts[0]");
-        // const updatePostResult = await updatePost(posts[0].id, {
-        //     title: "New Title",
-        //     content: "Updated Content"
-        // });
-        // console.log("Result:", updatePostResult);
+        console.log("Calling updatePost on posts[0]");
+        const updatePostResult = await updatePost(posts[0].id, {
+            title: "New Title",
+            content: "Updated Content"
+        });
+        console.log("Result:", updatePostResult);
 
         console.log("Calling updatePost on posts[1], only updating tags");
         const updatePostTagsResult = await updatePost(posts[1].id, {
@@ -215,6 +223,14 @@ async function testDB() {
         console.log("Calling getUserById with 1");
         const albert = await getUserById(1);
         console.log("Result", albert);
+
+        console.log("Calling getAllTags");
+        const allTags = await getAllTags();
+        console.log("Result:", allTags);
+
+        console.log("Calling getPostsByTagName with #happy");
+        const postsWithHappy = await getPostsByTagName("#happy");
+        console.log("Result:", postsWithHappy);
 
         console.log("Finished database tests!");
     } catch (error) {
