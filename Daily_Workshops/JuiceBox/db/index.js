@@ -2,6 +2,7 @@ const { Client } = require('pg'); // imports the pg module
 
 // supply the db name and location of the database
 const client = new Client('postgres://localhost:5432/juicebox_dev');
+// const client = new Client('postgres://localhost:5432/juicebox-dev');
 
 async function createUser({
     username,
@@ -15,7 +16,7 @@ async function createUser({
             VALUES ($1, $2, $3, $4)
             ON CONFLICT (username) DO NOTHING
             RETURNING *;
-        `, ([username, password, name, location]));
+        `, [username, password, name, location]);
 
         return user;
     } catch (error) {
@@ -52,8 +53,8 @@ async function updateUser(id, fields = {}) {
 async function getAllUsers() {
 
     try {
-        const { rows } = await client.query(
-            `SELECT 
+        const { rows } = await client.query(`
+                SELECT 
                 id, 
                 username, 
                 name,
@@ -137,7 +138,7 @@ async function updatePost(postId, fields = {}) {
 
     const setString = Object.keys(fields).map(
         (key, index) => `"${key}"=$${index + 1}`
-    ).join(`, `);
+    ).join(', ');
 
     console.log('const setString =', setString);
 
@@ -159,7 +160,7 @@ async function updatePost(postId, fields = {}) {
 
         const tagList = await createTags(tags);
         const tagListIdString = tagList.map(
-            tag => `${tag.name}`
+            tag => `${tag.id}`
         ).join(', ');
 
         // const tagListIdString = tagList.map(
@@ -172,9 +173,9 @@ async function updatePost(postId, fields = {}) {
         console.log('Starting delete query...')
         await client.query(`
         DELETE FROM post_tags
-      WHERE "tagId"
-      NOT IN (${tagListIdString})
-      AND "postId"=$1;
+        WHERE "tagId"
+        NOT IN (${tagListIdString})
+        AND "postId"=$1;
     `, [postId]);
 
         console.log('delete query complete...');
@@ -280,7 +281,7 @@ async function getPostsByTagName(tagName) {
 
 async function createTags(tagList) {
     if (tagList.length === 0) {
-        return;
+        return [];
     }
 
     // need something like: $1), ($2), ($3)
@@ -303,7 +304,7 @@ async function createTags(tagList) {
         // const { rows: [tags] } = await client.query(`
 
         const { rows } = await client.query(`
-            SELECT name FROM tags
+            SELECT * FROM tags
             WHERE name
             IN(${selectValues});
         `, tagList);
