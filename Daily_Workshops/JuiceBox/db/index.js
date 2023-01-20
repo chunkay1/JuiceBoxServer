@@ -320,6 +320,7 @@ async function createTags(tagList) {
     }
 }
 
+console.log('sdafsd');
 async function createPostTag(postId, tagId) {
     try {
         await client.query(`
